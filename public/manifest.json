@@ -17,6 +17,10 @@
     },
     "default_title": "Task Organizer"
   },
-  "permissions": ["storage"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": ["storage", "alarms", "notifications"],
   "host_permissions": []
 }
