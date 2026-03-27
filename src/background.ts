@@ -6,6 +6,7 @@
  */
 
 import type { Task } from './types/task';
+import { calcElapsedSeconds } from './utils/timerUtils';
 
 const ALARM_NAME = 'task-timer-tick';
 const STORAGE_KEY = 'task_organizer_tasks';
@@ -41,7 +42,7 @@ async function checkRunningTasks(): Promise<void> {
   const updated = tasks.map((task) => {
     if (task.status !== 'running' || !task.startedAt) return task;
 
-    const elapsed = task.elapsedSeconds + Math.floor((now - task.startedAt) / 1000);
+    const elapsed = calcElapsedSeconds(task.elapsedSeconds, task.startedAt, now);
     const limitSeconds = task.durationMinutes * 60;
     const isComplete = limitSeconds > 0 && elapsed >= limitSeconds;
 

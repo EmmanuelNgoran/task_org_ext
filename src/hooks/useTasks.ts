@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Task } from '../types/task';
 import { loadTasks, saveTasks } from '../utils/storage';
 import { playCompletionSound } from '../utils/sound';
+import { calcElapsedSeconds } from '../utils/timerUtils';
 
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -15,9 +16,12 @@ export function useTasks() {
 
       const initialized = loaded.map((t): Task => {
         if (t.status === 'running' && t.startedAt) {
-          // Catch up seconds accumulated while the popup was closed
-          const catchUp = Math.floor((now - t.startedAt) / 1000);
-          const newElapsed = t.elapsedSeconds + catchUp;
+          // Catch up seconds accumulated while the popup was closed.
+          // We then re-anchor startedAt to `now` so the background service worker
+          // continues counting from the correct baseline after the popup saves.
+          // saveTasks below is a single atomic write, so there is no window where
+          // the background could observe a mismatched (elapsedSeconds, startedAt) pair.
+          const newElapsed = calcElapsedSeconds(t.elapsedSeconds, t.startedAt, now);
           const limitSeconds = t.durationMinutes * 60;
           needsSave = true;
 
@@ -30,7 +34,7 @@ export function useTasks() {
               startedAt: undefined,
             };
           }
-          // Reset startedAt to now so the background worker re-anchors correctly
+          // Re-anchor startedAt to now so the background worker counts from here
           return { ...t, elapsedSeconds: newElapsed, startedAt: now };
         }
         return t;
@@ -90,12 +94,17 @@ export function useTasks() {
       const storedTasks = (changes[STORAGE_KEY].newValue as Task[]) ?? [];
       const oldTasks = (changes[STORAGE_KEY].oldValue as Task[]) ?? [];
 
-      setTasks((prev) =>
-        storedTasks.map((storedTask) => {
-          const localTask = prev.find((t) => t.id === storedTask.id);
+      // Build a map for O(1) lookups instead of O(n) scans per task
+      const oldTaskMap = new Map(oldTasks.map((t) => [t.id, t]));
+
+      setTasks((prev) => {
+        const localMap = new Map(prev.map((t) => [t.id, t]));
+
+        return storedTasks.map((storedTask) => {
+          const localTask = localMap.get(storedTask.id);
           // Play sound for tasks completed by the background worker
           if (storedTask.status === 'completed') {
-            const wasRunning = oldTasks.find((t) => t.id === storedTask.id)?.status === 'running';
+            const wasRunning = oldTaskMap.get(storedTask.id)?.status === 'running';
             if (wasRunning && localTask?.status === 'running') {
               playCompletionSound();
             }
@@ -105,8 +114,8 @@ export function useTasks() {
             return localTask;
           }
           return storedTask;
-        }),
-      );
+        });
+      });
     };
 
     chrome.storage.onChanged.addListener(listener);
