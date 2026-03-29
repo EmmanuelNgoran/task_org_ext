@@ -1,1 +1,77 @@
 @import "tailwindcss";
+
+/* ── B&W prose styles for markdown-rendered content ────────────────────── */
+.prose-bw { line-height: 1.5; }
+
+.prose-bw h1,
+.prose-bw h2,
+.prose-bw h3,
+.prose-bw h4 {
+  font-weight: 700;
+  margin: 0.6em 0 0.3em;
+  line-height: 1.3;
+  color: #000;
+}
+.prose-bw h1 { font-size: 1em; }
+.prose-bw h2 { font-size: 0.95em; }
+.prose-bw h3 { font-size: 0.9em; }
+
+.prose-bw p { margin: 0.3em 0; }
+
+.prose-bw strong { font-weight: 700; color: #000; }
+.prose-bw em    { font-style: italic; }
+
+.prose-bw code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+  background: #f3f3f3;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 0.1em 0.3em;
+}
+
+.prose-bw pre {
+  background: #f3f3f3;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0.6em 0.8em;
+  overflow-x: auto;
+  margin: 0.4em 0;
+}
+.prose-bw pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.prose-bw ul,
+.prose-bw ol {
+  padding-left: 1.2em;
+  margin: 0.3em 0;
+}
+.prose-bw ul { list-style: disc; }
+.prose-bw ol { list-style: decimal; }
+.prose-bw li { margin: 0.15em 0; }
+
+.prose-bw blockquote {
+  border-left: 3px solid #000;
+  margin: 0.4em 0;
+  padding-left: 0.7em;
+  color: #555;
+  font-style: italic;
+}
+
+.prose-bw a {
+  color: #000;
+  text-decoration: underline;
+}
+.prose-bw a:hover { opacity: 0.6; }
+
+.prose-bw hr {
+  border: none;
+  border-top: 1px solid #ccc;
+  margin: 0.5em 0;
+}
+
+/* Full-page layout scrollbar */
+html, body { margin: 0; padding: 0; }

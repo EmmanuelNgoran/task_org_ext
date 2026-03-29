@@ -33,7 +33,7 @@ export function TimerDisplay({ elapsedSeconds, durationMinutes }: TimerDisplayPr
             cy="20"
             r="18"
             fill="none"
-            stroke={progress >= 1 ? '#22c55e' : '#6366f1'}
+            stroke={progress >= 1 ? '#000000' : '#555555'}
             strokeWidth="3"
             strokeDasharray={circumference}
             strokeDashoffset={circumference * (1 - progress)}
@@ -41,7 +41,7 @@ export function TimerDisplay({ elapsedSeconds, durationMinutes }: TimerDisplayPr
             className="transition-all duration-1000"
           />
         </svg>
-        <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold text-gray-700">
+        <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold text-black">
           {durationMinutes > 0 ? formatTime(remaining) : formatTime(elapsedSeconds)}
         </span>
       </div>
