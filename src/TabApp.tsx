@@ -7,7 +7,7 @@ import { MarkdownRenderer } from './components/MarkdownRenderer';
 import './index.css';
 
 type StatusFilter = 'all' | 'active' | 'completed';
-type SortField = 'created' | 'priority';
+type SortField = 'created' | 'priority' | 'dueDate';
 
 const PRIORITY_ORDER: Record<TaskPriority, number> = { high: 0, medium: 1, low: 2 };
 
@@ -17,11 +17,23 @@ const priorityLabel: Record<TaskPriority, string> = {
   low: '↓ Low',
 };
 
-const priorityStyle: Record<TaskPriority, string> = {
-  high: 'border-black bg-black text-white',
-  medium: 'border-black text-black',
-  low: 'border-gray-400 text-gray-500',
+const priorityColors: Record<TaskPriority, { bg: string; color: string; border: string }> = {
+  high:   { bg: '#37352f', color: '#fff',     border: '#37352f' },
+  medium: { bg: 'transparent', color: '#37352f', border: '#37352f' },
+  low:    { bg: 'transparent', color: '#aeacaa', border: '#d3d1cb' },
 };
+
+function formatDueDate(dueDate: string): { label: string; cls: string } {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate + 'T00:00:00');
+  const diff = Math.round((due.getTime() - today.getTime()) / 86400000);
+
+  if (diff < 0)  return { label: `Overdue (${dueDate})`, cls: 'due-overdue' };
+  if (diff === 0) return { label: 'Due today', cls: 'due-today' };
+  if (diff === 1) return { label: 'Due tomorrow', cls: 'due-upcoming' };
+  return { label: `Due ${dueDate}`, cls: 'due-upcoming' };
+}
 
 export function TabApp() {
   const {
@@ -67,6 +79,11 @@ export function TabApp() {
         const diff = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
         if (diff !== 0) return diff;
       }
+      if (sortBy === 'dueDate') {
+        const aD = a.dueDate ?? '9999-12-31';
+        const bD = b.dueDate ?? '9999-12-31';
+        if (aD !== bD) return aD < bD ? -1 : 1;
+      }
       return b.createdAt - a.createdAt;
     });
 
@@ -75,200 +92,283 @@ export function TabApp() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center text-gray-500 text-sm">
+      <div style={{ minHeight: '100vh', background: 'var(--notion-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#787774', fontSize: 13 }}>
         Loading…
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white font-sans">
+    <div style={{ minHeight: '100vh', background: 'var(--notion-bg-subtle)', fontFamily: 'var(--notion-font)', color: 'var(--notion-text)' }}>
       {/* Top bar */}
-      <header className="border-b border-black px-8 py-4 flex items-center justify-between sticky top-0 bg-white z-10">
-        <div className="flex items-center gap-4">
-          <h1 className="text-base font-bold text-black uppercase tracking-widest">Task Organizer</h1>
-          <span className="text-xs text-gray-500">{activeCount} active · {completedCount} done</span>
+      <header
+        style={{
+          borderBottom: '1px solid var(--notion-border)',
+          padding: '12px 32px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          position: 'sticky',
+          top: 0,
+          background: 'var(--notion-bg)',
+          zIndex: 10,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <h1 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#37352f', letterSpacing: '0.04em' }}>
+            📋 Task Organizer
+          </h1>
+          <span style={{ fontSize: 12, color: '#787774' }}>{activeCount} active · {completedCount} done</span>
         </div>
         <button
           onClick={() => { setEditingTask(undefined); setShowModal(true); }}
-          className="flex items-center gap-1 bg-black text-white text-xs font-medium px-4 py-2 rounded hover:bg-gray-800 transition-colors"
+          className="notion-btn-primary"
+          style={{ display: 'flex', alignItems: 'center', gap: 6 }}
         >
-          <span className="text-sm leading-none">+</span> New Task
+          <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> New Task
         </button>
       </header>
 
-      <div className="flex h-[calc(100vh-57px)]">
+      <div style={{ display: 'flex', height: 'calc(100vh - 57px)' }}>
         {/* Sidebar */}
-        <aside className="w-48 shrink-0 border-r border-gray-200 flex flex-col py-4 px-3 gap-1">
-          {/* Status filters */}
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-2 mb-1">Status</p>
+        <aside
+          style={{
+            width: 200,
+            flexShrink: 0,
+            borderRight: '1px solid var(--notion-border)',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '16px 8px',
+            gap: 2,
+            background: 'var(--notion-bg)',
+            overflowY: 'auto',
+          }}
+        >
+          {/* Status */}
+          <p style={{ fontSize: 10, fontWeight: 700, color: '#aeacaa', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '0 8px', marginBottom: 4, marginTop: 0 }}>
+            Status
+          </p>
           {(['all', 'active', 'completed'] as StatusFilter[]).map((f) => (
             <button
               key={f}
               onClick={() => setStatusFilter(f)}
-              className={`text-left px-3 py-1.5 rounded text-xs font-medium capitalize transition-colors ${
-                statusFilter === f ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'
-              }`}
+              style={{
+                textAlign: 'left',
+                padding: '5px 10px',
+                borderRadius: 4,
+                fontSize: 13,
+                fontWeight: 500,
+                textTransform: 'capitalize',
+                background: statusFilter === f ? '#37352f' : 'transparent',
+                color: statusFilter === f ? '#fff' : '#787774',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+                fontFamily: 'var(--notion-font)',
+              }}
+              onMouseEnter={(e) => { if (statusFilter !== f) (e.currentTarget as HTMLButtonElement).style.background = 'var(--notion-bg-hover)'; }}
+              onMouseLeave={(e) => { if (statusFilter !== f) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
             >
               {f}
             </button>
           ))}
 
-          {/* Project filters */}
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-2 mt-3 mb-1">Project</p>
-          <button
-            onClick={() => setProjectFilter('all')}
-            className={`text-left px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-              projectFilter === 'all' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            All projects
-          </button>
-          {tasks.some((t) => !t.project) && (
+          {/* Project */}
+          <p style={{ fontSize: 10, fontWeight: 700, color: '#aeacaa', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '0 8px', marginBottom: 4, marginTop: 12 }}>
+            Project
+          </p>
+          {[
+            { key: 'all', label: 'All projects' },
+            ...(tasks.some((t) => !t.project) ? [{ key: '', label: 'No project' }] : []),
+            ...allProjects.map((p) => ({ key: p, label: `# ${p}` })),
+          ].map(({ key, label }) => (
             <button
-              onClick={() => setProjectFilter('')}
-              className={`text-left px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                projectFilter === '' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'
-              }`}
+              key={key}
+              onClick={() => setProjectFilter(key)}
+              style={{
+                textAlign: 'left',
+                padding: '5px 10px',
+                borderRadius: 4,
+                fontSize: 13,
+                fontWeight: 500,
+                background: projectFilter === key ? '#37352f' : 'transparent',
+                color: projectFilter === key ? '#fff' : '#787774',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+                fontFamily: 'var(--notion-font)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={(e) => { if (projectFilter !== key) (e.currentTarget as HTMLButtonElement).style.background = 'var(--notion-bg-hover)'; }}
+              onMouseLeave={(e) => { if (projectFilter !== key) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
             >
-              No project
-            </button>
-          )}
-          {allProjects.map((p) => (
-            <button
-              key={p}
-              onClick={() => setProjectFilter(p)}
-              className={`text-left px-3 py-1.5 rounded text-xs font-medium truncate transition-colors ${
-                projectFilter === p ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              # {p}
+              {label}
             </button>
           ))}
 
           {/* Sort */}
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-2 mt-3 mb-1">Sort by</p>
-          {(['priority', 'created'] as SortField[]).map((s) => (
+          <p style={{ fontSize: 10, fontWeight: 700, color: '#aeacaa', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '0 8px', marginBottom: 4, marginTop: 12 }}>
+            Sort by
+          </p>
+          {([['priority', 'Priority'], ['created', 'Date created'], ['dueDate', 'Due date']] as [SortField, string][]).map(([s, label]) => (
             <button
               key={s}
               onClick={() => setSortBy(s)}
-              className={`text-left px-3 py-1.5 rounded text-xs font-medium capitalize transition-colors ${
-                sortBy === s ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'
-              }`}
+              style={{
+                textAlign: 'left',
+                padding: '5px 10px',
+                borderRadius: 4,
+                fontSize: 13,
+                fontWeight: 500,
+                background: sortBy === s ? '#37352f' : 'transparent',
+                color: sortBy === s ? '#fff' : '#787774',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+                fontFamily: 'var(--notion-font)',
+              }}
+              onMouseEnter={(e) => { if (sortBy !== s) (e.currentTarget as HTMLButtonElement).style.background = 'var(--notion-bg-hover)'; }}
+              onMouseLeave={(e) => { if (sortBy !== s) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
             >
-              {s === 'created' ? 'Date created' : 'Priority'}
+              {label}
             </button>
           ))}
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto px-6 py-4">
+        <main style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
           {filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-48 text-gray-400 text-sm gap-2">
-              <span className="text-4xl">📋</span>
-              <p>
-                {statusFilter === 'completed'
-                  ? 'No completed tasks yet.'
-                  : 'No tasks here. Create one!'}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 192, color: '#aeacaa', fontSize: 13, gap: 8 }}>
+              <span style={{ fontSize: 36 }}>📋</span>
+              <p style={{ margin: 0 }}>
+                {statusFilter === 'completed' ? 'No completed tasks yet.' : 'No tasks here. Create one!'}
               </p>
             </div>
           ) : (
-            <div className="flex flex-col gap-3 max-w-3xl mx-auto">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 800, margin: '0 auto' }}>
               {filtered.map((task) => {
                 const isExpanded = expandedId === task.id;
                 const completedSub = task.subItems.filter((s) => s.completed).length;
+                const pc = priorityColors[task.priority];
+                const dueInfo = task.dueDate ? formatDueDate(task.dueDate) : null;
 
                 return (
                   <div
                     key={task.id}
-                    className={`border rounded bg-white transition-all ${
-                      task.status === 'running' ? 'border-black shadow-md' : 'border-gray-300'
-                    } ${task.status === 'completed' ? 'opacity-60' : ''}`}
+                    style={{
+                      border: `1px solid ${task.status === 'running' ? '#37352f' : 'var(--notion-border)'}`,
+                      borderRadius: 6,
+                      background: 'var(--notion-bg)',
+                      boxShadow: task.status === 'running' ? '0 2px 8px rgba(55,53,47,0.12)' : '0 1px 3px rgba(0,0,0,0.04)',
+                      opacity: task.status === 'completed' ? 0.65 : 1,
+                      transition: 'all 0.15s',
+                    }}
                   >
                     {/* Card header */}
-                    <div className="flex gap-4 items-start p-4">
+                    <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', padding: '14px 16px' }}>
                       <TimerDisplay
                         elapsedSeconds={task.elapsedSeconds}
                         durationMinutes={task.durationMinutes}
                       />
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start gap-3 justify-between">
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, justifyContent: 'space-between' }}>
                           <h3
-                            className={`text-sm font-semibold leading-snug ${
-                              task.status === 'completed'
-                                ? 'line-through text-gray-400'
-                                : 'text-black'
-                            }`}
+                            style={{
+                              margin: 0,
+                              fontSize: 14,
+                              fontWeight: 600,
+                              lineHeight: 1.4,
+                              color: task.status === 'completed' ? '#aeacaa' : '#37352f',
+                              textDecoration: task.status === 'completed' ? 'line-through' : 'none',
+                              wordBreak: 'break-word',
+                            }}
                           >
                             {task.title}
                           </h3>
-                          <div className="flex items-center gap-2 shrink-0">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                             {task.project && (
-                              <span className="text-[10px] font-medium text-gray-500 border border-gray-300 rounded px-1.5 py-0.5">
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 500,
+                                  color: '#787774',
+                                  border: '1px solid var(--notion-border)',
+                                  borderRadius: 3,
+                                  padding: '1px 6px',
+                                }}
+                              >
                                 # {task.project}
                               </span>
                             )}
                             <span
-                              className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wide ${priorityStyle[task.priority]}`}
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 700,
+                                padding: '2px 6px',
+                                borderRadius: 3,
+                                border: `1px solid ${pc.border}`,
+                                background: pc.bg,
+                                color: pc.color,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.04em',
+                                whiteSpace: 'nowrap',
+                              }}
                             >
                               {priorityLabel[task.priority]}
                             </span>
                           </div>
                         </div>
 
-                        {task.subItems.length > 0 && (
-                          <p className="text-[10px] text-gray-500 mt-0.5">
-                            ☑ {completedSub}/{task.subItems.length} sub-tasks
-                          </p>
+                        {/* Meta: sub-items + due date */}
+                        {(task.subItems.length > 0 || dueInfo) && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '3px 10px', marginTop: 3 }}>
+                            {task.subItems.length > 0 && (
+                              <span style={{ fontSize: 11, color: '#787774' }}>
+                                ☑ {completedSub}/{task.subItems.length} sub-tasks
+                              </span>
+                            )}
+                            {dueInfo && (
+                              <span className={dueInfo.cls} style={{ fontSize: 11, fontWeight: 500 }}>
+                                📅 {dueInfo.label}
+                              </span>
+                            )}
+                          </div>
                         )}
 
                         {/* Actions */}
-                        <div className="flex gap-1.5 mt-3 flex-wrap">
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
                           {task.status === 'pending' && (
-                            <button
-                              onClick={() => startTask(task.id)}
-                              className="text-xs px-3 py-1 rounded bg-black text-white hover:bg-gray-800 transition-colors"
-                            >
+                            <button onClick={() => startTask(task.id)} className="notion-task-btn notion-task-btn--primary">
                               ▶ Start
                             </button>
                           )}
                           {task.status === 'running' && (
-                            <button
-                              onClick={() => pauseTask(task.id)}
-                              className="text-xs px-3 py-1 rounded border border-black text-black hover:bg-gray-100 transition-colors"
-                            >
+                            <button onClick={() => pauseTask(task.id)} className="notion-task-btn">
                               ⏸ Pause
                             </button>
                           )}
                           {task.status === 'paused' && (
-                            <button
-                              onClick={() => startTask(task.id)}
-                              className="text-xs px-3 py-1 rounded bg-black text-white hover:bg-gray-800 transition-colors"
-                            >
+                            <button onClick={() => startTask(task.id)} className="notion-task-btn notion-task-btn--primary">
                               ▶ Resume
                             </button>
                           )}
                           {(task.status === 'running' || task.status === 'paused') && (
-                            <button
-                              onClick={() => completeTask(task.id)}
-                              className="text-xs px-3 py-1 rounded border border-black text-black hover:bg-gray-100 transition-colors"
-                            >
+                            <button onClick={() => completeTask(task.id)} className="notion-task-btn">
                               ✓ Done
                             </button>
                           )}
                           {task.status !== 'pending' && (
-                            <button
-                              onClick={() => resetTask(task.id)}
-                              className="text-xs px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-                            >
+                            <button onClick={() => resetTask(task.id)} className="notion-task-btn">
                               ↺ Reset
                             </button>
                           )}
                           {task.status !== 'running' && (
                             <button
                               onClick={() => { setEditingTask(task); setShowModal(true); }}
-                              className="text-xs px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                              className="notion-task-btn"
                             >
                               ✎ Edit
                             </button>
@@ -277,13 +377,13 @@ export function TabApp() {
                             <>
                               <button
                                 onClick={() => { deleteTask(task.id); setConfirmDeleteId(null); }}
-                                className="text-xs px-3 py-1 rounded bg-black text-white hover:bg-gray-800 transition-colors"
+                                className="notion-task-btn notion-task-btn--danger"
                               >
                                 Confirm delete
                               </button>
                               <button
                                 onClick={() => setConfirmDeleteId(null)}
-                                className="text-xs px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                                className="notion-task-btn"
                               >
                                 Cancel
                               </button>
@@ -291,7 +391,7 @@ export function TabApp() {
                           ) : (
                             <button
                               onClick={() => setConfirmDeleteId(task.id)}
-                              className="text-xs px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                              className="notion-task-btn"
                             >
                               🗑 Delete
                             </button>
@@ -299,7 +399,7 @@ export function TabApp() {
                           {(task.description.trim() || task.subItems.length > 0) && (
                             <button
                               onClick={() => setExpandedId(isExpanded ? null : task.id)}
-                              className="text-xs px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                              className="notion-task-btn"
                             >
                               {isExpanded ? '▲ Collapse' : '▼ Details'}
                             </button>
@@ -310,40 +410,53 @@ export function TabApp() {
 
                     {/* Expanded section */}
                     {isExpanded && (
-                      <div className="border-t border-gray-200 px-4 py-4 flex flex-col gap-4">
+                      <div
+                        style={{
+                          borderTop: '1px solid var(--notion-border)',
+                          padding: '14px 16px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 14,
+                        }}
+                      >
                         {task.description.trim() && (
-                          <MarkdownRenderer
-                            content={task.description}
-                            className="text-sm text-gray-800"
-                          />
+                          <MarkdownRenderer content={task.description} className="prose-bw" />
                         )}
                         {task.subItems.length > 0 && (
                           <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                            <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, color: '#aeacaa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                               Sub-tasks
                             </p>
-                            <ul className="flex flex-col gap-1.5">
+                            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
                               {task.subItems.map((item) => (
                                 <li
                                   key={item.id}
-                                  className="flex items-center gap-2 cursor-pointer group"
+                                  style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
                                   onClick={() => toggleSubItem(task.id, item.id)}
                                 >
                                   <span
-                                    className={`w-4 h-4 shrink-0 rounded border flex items-center justify-center text-[10px] transition-colors ${
-                                      item.completed
-                                        ? 'bg-black border-black text-white'
-                                        : 'border-gray-400 group-hover:border-black'
-                                    }`}
+                                    style={{
+                                      width: 16,
+                                      height: 16,
+                                      flexShrink: 0,
+                                      borderRadius: 3,
+                                      border: `1px solid ${item.completed ? '#37352f' : '#aeacaa'}`,
+                                      background: item.completed ? '#37352f' : 'transparent',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      fontSize: 10,
+                                      color: '#fff',
+                                    }}
                                   >
                                     {item.completed ? '✓' : ''}
                                   </span>
                                   <span
-                                    className={`text-sm transition-colors ${
-                                      item.completed
-                                        ? 'line-through text-gray-400'
-                                        : 'text-black'
-                                    }`}
+                                    style={{
+                                      fontSize: 13,
+                                      color: item.completed ? '#aeacaa' : '#37352f',
+                                      textDecoration: item.completed ? 'line-through' : 'none',
+                                    }}
                                   >
                                     {item.text}
                                   </span>
