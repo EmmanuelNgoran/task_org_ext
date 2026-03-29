@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { marked } from 'marked';
 import type { Task, TaskPriority, SubItem } from '../types/task';
+import { ProjectCombobox } from './ProjectCombobox';
 
 interface TaskModalProps {
   task?: Task;
@@ -190,22 +191,11 @@ export function TaskModal({ task, existingProjects = [], onSave, onClose }: Task
 
             <div className="flex-1">
               <label className="notion-label">Project</label>
-              <input
-                type="text"
-                list="project-list"
+              <ProjectCombobox
                 value={project}
-                onChange={(e) => setProject(e.target.value)}
-                placeholder="e.g. Work, Personal…"
-                maxLength={50}
-                className="notion-input"
+                onChange={setProject}
+                options={uniqueProjects}
               />
-              {uniqueProjects.length > 0 && (
-                <datalist id="project-list">
-                  {uniqueProjects.map((p) => (
-                    <option key={p} value={p} />
-                  ))}
-                </datalist>
-              )}
             </div>
 
             <div style={{ flex: '0 0 150px' }}>
