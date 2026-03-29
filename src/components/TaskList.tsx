@@ -5,7 +5,7 @@ import { TaskModal } from './TaskModal';
 import { useTasks } from '../hooks/useTasks';
 
 type StatusFilter = 'all' | 'active' | 'completed';
-type SortField = 'created' | 'priority';
+type SortField = 'created' | 'priority' | 'dueDate';
 
 const PRIORITY_ORDER: Record<TaskPriority, number> = { high: 0, medium: 1, low: 2 };
 
@@ -48,6 +48,11 @@ export function TaskList() {
         const diff = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
         if (diff !== 0) return diff;
       }
+      if (sortBy === 'dueDate') {
+        const aD = a.dueDate ?? '9999-12-31';
+        const bD = b.dueDate ?? '9999-12-31';
+        if (aD !== bD) return aD < bD ? -1 : 1;
+      }
       return b.createdAt - a.createdAt;
     });
 
@@ -64,51 +69,73 @@ export function TaskList() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-32 text-gray-500 text-sm">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 128, color: '#787774', fontSize: 13 }}>
         Loading…
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-black">
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '10px 14px',
+          borderBottom: '1px solid var(--notion-border)',
+          flexShrink: 0,
+        }}
+      >
         <div>
-          <h1 className="text-sm font-bold text-black uppercase tracking-widest">Task Organizer</h1>
-          <p className="text-[11px] text-gray-500 mt-0.5">
+          <h1 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#37352f', letterSpacing: '0.04em' }}>
+            Task Organizer
+          </h1>
+          <p style={{ margin: '1px 0 0', fontSize: 10, color: '#787774' }}>
             {activeCount} active · {completedCount} done
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <button
             onClick={openFullPage}
             title="Open full page"
-            className="text-black hover:opacity-60 transition-opacity text-base"
+            className="notion-icon-btn"
             aria-label="Open full page"
+            style={{ fontSize: 16 }}
           >
             ⤢
           </button>
           <button
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-1 bg-black text-white text-xs font-medium px-3 py-1.5 rounded hover:bg-gray-800 transition-colors"
+            className="notion-btn-primary"
+            style={{ padding: '5px 10px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
           >
-            <span className="text-sm leading-none">+</span> New
+            <span style={{ fontSize: 14, lineHeight: 1 }}>+</span> New
           </button>
         </div>
       </div>
 
       {/* Status filter tabs */}
-      <div className="flex border-b border-gray-200">
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--notion-border)', flexShrink: 0 }}>
         {(['all', 'active', 'completed'] as StatusFilter[]).map((f) => (
           <button
             key={f}
             onClick={() => setStatusFilter(f)}
-            className={`flex-1 text-xs py-2 font-medium capitalize transition-colors ${
-              statusFilter === f
-                ? 'text-black border-b-2 border-black'
-                : 'text-gray-400 hover:text-black'
-            }`}
+            style={{
+              flex: 1,
+              fontSize: 11,
+              padding: '7px 0',
+              fontWeight: 500,
+              textTransform: 'capitalize',
+              background: 'none',
+              border: 'none',
+              borderBottom: statusFilter === f ? '2px solid #37352f' : '2px solid transparent',
+              color: statusFilter === f ? '#37352f' : '#aeacaa',
+              cursor: 'pointer',
+              transition: 'color 0.15s',
+              fontFamily: 'var(--notion-font)',
+            }}
           >
             {f}
           </button>
@@ -117,65 +144,74 @@ export function TaskList() {
 
       {/* Project filter + sort row */}
       {(allProjects.length > 0 || tasks.some((t) => !t.project)) && (
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 overflow-x-auto">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide shrink-0">
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            padding: '5px 10px',
+            borderBottom: '1px solid var(--notion-border)',
+            overflowX: 'auto',
+            flexShrink: 0,
+          }}
+        >
+          <span style={{ fontSize: 9, fontWeight: 700, color: '#aeacaa', textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>
             Project:
           </span>
-          <button
-            onClick={() => setProjectFilter('all')}
-            className={`text-[10px] px-2 py-0.5 rounded border shrink-0 transition-colors ${
-              projectFilter === 'all'
-                ? 'bg-black text-white border-black'
-                : 'border-gray-300 text-gray-600 hover:border-black'
-            }`}
-          >
-            All
-          </button>
-          {tasks.some((t) => !t.project) && (
+          {[
+            { key: 'all', label: 'All' },
+            ...(tasks.some((t) => !t.project) ? [{ key: '', label: 'None' }] : []),
+            ...allProjects.map((p) => ({ key: p, label: p })),
+          ].map(({ key, label }) => (
             <button
-              onClick={() => setProjectFilter('')}
-              className={`text-[10px] px-2 py-0.5 rounded border shrink-0 transition-colors ${
-                projectFilter === ''
-                  ? 'bg-black text-white border-black'
-                  : 'border-gray-300 text-gray-600 hover:border-black'
-              }`}
+              key={key}
+              onClick={() => setProjectFilter(key)}
+              style={{
+                fontSize: 10,
+                padding: '2px 7px',
+                borderRadius: 3,
+                border: `1px solid ${projectFilter === key ? '#37352f' : 'var(--notion-border)'}`,
+                background: projectFilter === key ? '#37352f' : 'transparent',
+                color: projectFilter === key ? '#fff' : '#787774',
+                cursor: 'pointer',
+                flexShrink: 0,
+                transition: 'all 0.15s',
+                fontFamily: 'var(--notion-font)',
+              }}
             >
-              None
-            </button>
-          )}
-          {allProjects.map((p) => (
-            <button
-              key={p}
-              onClick={() => setProjectFilter(p)}
-              className={`text-[10px] px-2 py-0.5 rounded border shrink-0 transition-colors ${
-                projectFilter === p
-                  ? 'bg-black text-white border-black'
-                  : 'border-gray-300 text-gray-600 hover:border-black'
-              }`}
-            >
-              {p}
+              {label}
             </button>
           ))}
-          <div className="ml-auto shrink-0 flex items-center gap-1">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Sort:</span>
+          <div style={{ marginLeft: 'auto', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 9, fontWeight: 700, color: '#aeacaa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sort:</span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortField)}
-              className="text-[10px] border border-gray-300 rounded px-1 py-0.5 text-gray-600 bg-white outline-none focus:border-black"
+              style={{
+                fontSize: 10,
+                border: '1px solid var(--notion-border)',
+                borderRadius: 3,
+                padding: '2px 4px',
+                color: '#787774',
+                background: '#fff',
+                outline: 'none',
+                fontFamily: 'var(--notion-font)',
+              }}
             >
               <option value="created">Date</option>
               <option value="priority">Priority</option>
+              <option value="dueDate">Due date</option>
             </select>
           </div>
         </div>
       )}
 
       {/* Task list */}
-      <div className="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-2">
+      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-gray-400 text-sm gap-2">
-            <span className="text-3xl">📋</span>
-            <p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 120, color: '#aeacaa', fontSize: 12, gap: 6 }}>
+            <span style={{ fontSize: 28 }}>📋</span>
+            <p style={{ margin: 0 }}>
               {statusFilter === 'completed' ? 'No completed tasks yet.' : 'No tasks. Create one!'}
             </p>
           </div>

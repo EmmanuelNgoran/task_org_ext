@@ -1,7 +1,124 @@
 @import "tailwindcss";
 
+/* ── Notion-inspired design tokens ─────────────────────────────────────── */
+:root {
+  --notion-text:          #37352f;
+  --notion-text-muted:    #787774;
+  --notion-text-faint:    #aeacaa;
+  --notion-bg:            #ffffff;
+  --notion-bg-subtle:     #fbfbfa;
+  --notion-bg-hover:      #f1f1ef;
+  --notion-border:        #e9e9e7;
+  --notion-border-strong: #d3d1cb;
+  --notion-accent:        #37352f;
+  --notion-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--notion-font);
+  color: var(--notion-text);
+  background: var(--notion-bg);
+}
+
+/* ── Notion UI helpers ──────────────────────────────────────────────────── */
+.notion-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--notion-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.notion-input {
+  width: 100%;
+  border: 1px solid var(--notion-border);
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--notion-text);
+  background: var(--notion-bg);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+  font-family: var(--notion-font);
+}
+.notion-input:focus {
+  border-color: var(--notion-text);
+  box-shadow: 0 0 0 2px rgba(55,53,47,0.12);
+}
+.notion-input::placeholder {
+  color: var(--notion-text-faint);
+}
+
+.notion-preview {
+  border: 1px solid var(--notion-border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  min-height: 80px;
+  font-size: 13px;
+  background: var(--notion-bg-subtle);
+}
+
+.notion-btn-primary {
+  background: var(--notion-text);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  font-family: var(--notion-font);
+}
+.notion-btn-primary:hover { opacity: 0.85; }
+
+.notion-btn-secondary {
+  background: transparent;
+  color: var(--notion-text);
+  border: 1px solid var(--notion-border);
+  border-radius: 4px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: var(--notion-font);
+}
+.notion-btn-secondary:hover { background: var(--notion-bg-hover); }
+
+.notion-small-btn {
+  background: transparent;
+  color: var(--notion-text-muted);
+  border: 1px solid var(--notion-border);
+  border-radius: 3px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: var(--notion-font);
+}
+.notion-small-btn:hover { background: var(--notion-bg-hover); color: var(--notion-text); }
+
+.notion-icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.15s;
+  padding: 2px 5px;
+  color: var(--notion-text-faint);
+  font-family: var(--notion-font);
+}
+.notion-icon-btn:hover { background: var(--notion-bg-hover); color: var(--notion-text); }
+
 /* ── B&W prose styles for markdown-rendered content ────────────────────── */
-.prose-bw { line-height: 1.5; }
+.prose-bw { line-height: 1.6; font-size: 13px; color: var(--notion-text); }
 
 .prose-bw h1,
 .prose-bw h2,
@@ -10,29 +127,29 @@
   font-weight: 700;
   margin: 0.6em 0 0.3em;
   line-height: 1.3;
-  color: #000;
+  color: var(--notion-text);
 }
 .prose-bw h1 { font-size: 1em; }
 .prose-bw h2 { font-size: 0.95em; }
 .prose-bw h3 { font-size: 0.9em; }
 
 .prose-bw p { margin: 0.3em 0; }
-
-.prose-bw strong { font-weight: 700; color: #000; }
+.prose-bw strong { font-weight: 700; color: var(--notion-text); }
 .prose-bw em    { font-style: italic; }
 
 .prose-bw code {
-  font-family: ui-monospace, monospace;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
   font-size: 0.85em;
-  background: #f3f3f3;
-  border: 1px solid #ddd;
+  background: #f1f1ef;
+  border: 1px solid #e9e9e7;
   border-radius: 3px;
   padding: 0.1em 0.3em;
+  color: #eb5757;
 }
 
 .prose-bw pre {
-  background: #f3f3f3;
-  border: 1px solid #ccc;
+  background: #f7f6f3;
+  border: 1px solid #e9e9e7;
   border-radius: 4px;
   padding: 0.6em 0.8em;
   overflow-x: auto;
@@ -42,11 +159,12 @@
   background: none;
   border: none;
   padding: 0;
+  color: var(--notion-text);
 }
 
 .prose-bw ul,
 .prose-bw ol {
-  padding-left: 1.2em;
+  padding-left: 1.4em;
   margin: 0.3em 0;
 }
 .prose-bw ul { list-style: disc; }
@@ -54,24 +172,65 @@
 .prose-bw li { margin: 0.15em 0; }
 
 .prose-bw blockquote {
-  border-left: 3px solid #000;
+  border-left: 3px solid #d3d1cb;
   margin: 0.4em 0;
-  padding-left: 0.7em;
-  color: #555;
+  padding-left: 0.8em;
+  color: var(--notion-text-muted);
   font-style: italic;
 }
 
 .prose-bw a {
-  color: #000;
+  color: #2383e2;
   text-decoration: underline;
 }
-.prose-bw a:hover { opacity: 0.6; }
+.prose-bw a:hover { opacity: 0.7; }
 
 .prose-bw hr {
   border: none;
-  border-top: 1px solid #ccc;
+  border-top: 1px solid #e9e9e7;
   margin: 0.5em 0;
 }
 
-/* Full-page layout scrollbar */
-html, body { margin: 0; padding: 0; }
+/* ── Task card action buttons ───────────────────────────────────────────── */
+.notion-task-btn {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--notion-border);
+  background: transparent;
+  color: var(--notion-text-muted);
+  cursor: pointer;
+  transition: all 0.12s;
+  font-family: var(--notion-font);
+  white-space: nowrap;
+}
+.notion-task-btn:hover {
+  background: var(--notion-bg-hover);
+  color: var(--notion-text);
+  border-color: var(--notion-border-strong);
+}
+.notion-task-btn--primary {
+  background: var(--notion-text);
+  color: #fff;
+  border-color: var(--notion-text);
+}
+.notion-task-btn--primary:hover {
+  opacity: 0.85;
+  background: var(--notion-text);
+  color: #fff;
+}
+.notion-task-btn--danger {
+  background: #eb5757;
+  color: #fff;
+  border-color: #eb5757;
+}
+.notion-task-btn--danger:hover {
+  opacity: 0.85;
+  background: #eb5757;
+  color: #fff;
+}
+
+/* ── Due date badge color ───────────────────────────────────────────────── */
+.due-overdue  { color: #eb5757; }
+.due-today    { color: #d9730d; }
+.due-upcoming { color: #787774; }

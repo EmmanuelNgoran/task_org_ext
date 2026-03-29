@@ -16,6 +16,7 @@ export interface Task {
   project: string;           // project / group name (empty string = no project)
   subItems: SubItem[];       // checklist sub-tasks
   durationMinutes: number;   // planned duration in minutes
+  dueDate?: string;          // optional due date (YYYY-MM-DD)
   elapsedSeconds: number;    // accumulated seconds before the current running period
   status: TaskStatus;
   createdAt: number;         // timestamp

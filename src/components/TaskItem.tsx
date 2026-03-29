@@ -22,11 +22,23 @@ const priorityLabel: Record<TaskPriority, string> = {
   low: '↓ Low',
 };
 
-const priorityStyle: Record<TaskPriority, string> = {
-  high: 'border-black bg-black text-white',
-  medium: 'border-black text-black',
-  low: 'border-gray-400 text-gray-500',
+const priorityColors: Record<TaskPriority, { bg: string; color: string; border: string }> = {
+  high:   { bg: '#37352f', color: '#fff',     border: '#37352f' },
+  medium: { bg: 'transparent', color: '#37352f', border: '#37352f' },
+  low:    { bg: 'transparent', color: '#aeacaa', border: '#d3d1cb' },
 };
+
+function formatDueDate(dueDate: string): { label: string; cls: string } {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate + 'T00:00:00');
+  const diff = Math.round((due.getTime() - today.getTime()) / 86400000);
+
+  if (diff < 0)  return { label: `Overdue (${dueDate})`, cls: 'due-overdue' };
+  if (diff === 0) return { label: 'Due today', cls: 'due-today' };
+  if (diff === 1) return { label: 'Due tomorrow', cls: 'due-upcoming' };
+  return { label: `Due ${dueDate}`, cls: 'due-upcoming' };
+}
 
 export function TaskItem({
   task,
@@ -45,21 +57,29 @@ export function TaskItem({
 
   const hasDetails = task.description.trim() || task.subItems.length > 0;
   const completedSubItems = task.subItems.filter((s) => s.completed).length;
+  const dueInfo = task.dueDate ? formatDueDate(task.dueDate) : null;
 
   const handleSave = (data: Partial<Task>) => {
     onUpdate(task.id, data);
     setEditing(false);
   };
 
+  const pc = priorityColors[task.priority];
+
   return (
     <>
       <div
-        className={`border rounded bg-white transition-all ${
-          task.status === 'running' ? 'border-black shadow-md' : 'border-gray-300'
-        } ${task.status === 'completed' ? 'opacity-60' : ''}`}
+        style={{
+          border: `1px solid ${task.status === 'running' ? '#37352f' : 'var(--notion-border)'}`,
+          borderRadius: 6,
+          background: 'var(--notion-bg)',
+          boxShadow: task.status === 'running' ? '0 2px 8px rgba(55,53,47,0.15)' : 'none',
+          opacity: task.status === 'completed' ? 0.6 : 1,
+          transition: 'all 0.15s',
+        }}
       >
         {/* Main row */}
-        <div className="flex gap-3 items-start p-3">
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 12px' }}>
           {/* Timer circle */}
           <TimerDisplay
             elapsedSeconds={task.elapsedSeconds}
@@ -67,119 +87,110 @@ export function TaskItem({
           />
 
           {/* Content */}
-          <div className="flex-1 min-w-0">
+          <div style={{ flex: 1, minWidth: 0 }}>
             {/* Title row */}
-            <div className="flex items-start gap-2 justify-between">
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, justifyContent: 'space-between' }}>
               <h3
-                className={`text-sm font-semibold leading-tight ${
-                  task.status === 'completed'
-                    ? 'line-through text-gray-400'
-                    : 'text-black'
-                }`}
+                style={{
+                  margin: 0,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  lineHeight: 1.4,
+                  color: task.status === 'completed' ? '#aeacaa' : '#37352f',
+                  textDecoration: task.status === 'completed' ? 'line-through' : 'none',
+                  wordBreak: 'break-word',
+                }}
               >
                 {task.title}
               </h3>
-              <div className="flex items-center gap-1 shrink-0">
-                <span
-                  className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wide ${priorityStyle[task.priority]}`}
-                >
-                  {priorityLabel[task.priority]}
-                </span>
-              </div>
+              <span
+                style={{
+                  flexShrink: 0,
+                  fontSize: 9,
+                  fontWeight: 700,
+                  padding: '2px 5px',
+                  borderRadius: 3,
+                  border: `1px solid ${pc.border}`,
+                  background: pc.bg,
+                  color: pc.color,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {priorityLabel[task.priority]}
+              </span>
             </div>
 
-            {/* Project + sub-items progress */}
-            {(task.project || task.subItems.length > 0) && (
-              <div className="flex items-center gap-2 mt-0.5">
+            {/* Meta row: project, sub-items count, due date */}
+            {(task.project || task.subItems.length > 0 || dueInfo) && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 8px', marginTop: 2 }}>
                 {task.project && (
-                  <span className="text-[10px] text-gray-500 font-medium"># {task.project}</span>
+                  <span style={{ fontSize: 10, color: '#787774', fontWeight: 500 }}>
+                    # {task.project}
+                  </span>
                 )}
                 {task.subItems.length > 0 && (
-                  <span className="text-[10px] text-gray-500">
+                  <span style={{ fontSize: 10, color: '#787774' }}>
                     ☑ {completedSubItems}/{task.subItems.length}
+                  </span>
+                )}
+                {dueInfo && (
+                  <span className={dueInfo.cls} style={{ fontSize: 10, fontWeight: 500 }}>
+                    📅 {dueInfo.label}
                   </span>
                 )}
               </div>
             )}
 
             {/* Action buttons */}
-            <div className="flex gap-1 mt-2 flex-wrap">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
               {task.status === 'pending' && (
-                <button
-                  onClick={() => onStart(task.id)}
-                  className="text-[11px] px-2 py-0.5 rounded bg-black text-white hover:bg-gray-800 transition-colors"
-                >
+                <button onClick={() => onStart(task.id)} className="notion-task-btn notion-task-btn--primary">
                   ▶ Start
                 </button>
               )}
               {task.status === 'running' && (
-                <button
-                  onClick={() => onPause(task.id)}
-                  className="text-[11px] px-2 py-0.5 rounded border border-black text-black hover:bg-gray-100 transition-colors"
-                >
+                <button onClick={() => onPause(task.id)} className="notion-task-btn">
                   ⏸ Pause
                 </button>
               )}
               {task.status === 'paused' && (
-                <button
-                  onClick={() => onStart(task.id)}
-                  className="text-[11px] px-2 py-0.5 rounded bg-black text-white hover:bg-gray-800 transition-colors"
-                >
+                <button onClick={() => onStart(task.id)} className="notion-task-btn notion-task-btn--primary">
                   ▶ Resume
                 </button>
               )}
               {(task.status === 'running' || task.status === 'paused') && (
-                <button
-                  onClick={() => onComplete(task.id)}
-                  className="text-[11px] px-2 py-0.5 rounded border border-black text-black hover:bg-gray-100 transition-colors"
-                >
+                <button onClick={() => onComplete(task.id)} className="notion-task-btn">
                   ✓ Done
                 </button>
               )}
               {task.status !== 'pending' && (
-                <button
-                  onClick={() => onReset(task.id)}
-                  className="text-[11px] px-2 py-0.5 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-                >
+                <button onClick={() => onReset(task.id)} className="notion-task-btn">
                   ↺ Reset
                 </button>
               )}
               {task.status !== 'running' && (
-                <button
-                  onClick={() => setEditing(true)}
-                  className="text-[11px] px-2 py-0.5 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-                >
+                <button onClick={() => setEditing(true)} className="notion-task-btn">
                   ✎ Edit
                 </button>
               )}
               {confirmDelete ? (
                 <>
-                  <button
-                    onClick={() => onDelete(task.id)}
-                    className="text-[11px] px-2 py-0.5 rounded bg-black text-white hover:bg-gray-800 transition-colors"
-                  >
+                  <button onClick={() => onDelete(task.id)} className="notion-task-btn notion-task-btn--danger">
                     Confirm
                   </button>
-                  <button
-                    onClick={() => setConfirmDelete(false)}
-                    className="text-[11px] px-2 py-0.5 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-                  >
+                  <button onClick={() => setConfirmDelete(false)} className="notion-task-btn">
                     Cancel
                   </button>
                 </>
               ) : (
-                <button
-                  onClick={() => setConfirmDelete(true)}
-                  className="text-[11px] px-2 py-0.5 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-                >
+                <button onClick={() => setConfirmDelete(true)} className="notion-task-btn">
                   🗑
                 </button>
               )}
               {hasDetails && (
-                <button
-                  onClick={() => setExpanded((v) => !v)}
-                  className="text-[11px] px-2 py-0.5 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-                >
+                <button onClick={() => setExpanded((v) => !v)} className="notion-task-btn">
                   {expanded ? '▲ Less' : '▼ More'}
                 </button>
               )}
@@ -189,31 +200,49 @@ export function TaskItem({
 
         {/* Expanded panel */}
         {expanded && hasDetails && (
-          <div className="border-t border-gray-200 px-3 py-3 flex flex-col gap-3">
+          <div
+            style={{
+              borderTop: '1px solid var(--notion-border)',
+              padding: '10px 12px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+            }}
+          >
             {task.description.trim() && (
-              <MarkdownRenderer content={task.description} className="text-xs text-gray-700" />
+              <MarkdownRenderer content={task.description} className="prose-bw" />
             )}
             {task.subItems.length > 0 && (
-              <ul className="flex flex-col gap-1">
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {task.subItems.map((item) => (
                   <li
                     key={item.id}
-                    className="flex items-center gap-2 cursor-pointer group"
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
                     onClick={() => onToggleSubItem(task.id, item.id)}
                   >
                     <span
-                      className={`w-4 h-4 shrink-0 rounded border flex items-center justify-center text-[10px] transition-colors ${
-                        item.completed
-                          ? 'bg-black border-black text-white'
-                          : 'border-gray-400 group-hover:border-black'
-                      }`}
+                      style={{
+                        width: 14,
+                        height: 14,
+                        flexShrink: 0,
+                        borderRadius: 3,
+                        border: `1px solid ${item.completed ? '#37352f' : '#aeacaa'}`,
+                        background: item.completed ? '#37352f' : 'transparent',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 9,
+                        color: '#fff',
+                      }}
                     >
                       {item.completed ? '✓' : ''}
                     </span>
                     <span
-                      className={`text-xs transition-colors ${
-                        item.completed ? 'line-through text-gray-400' : 'text-black'
-                      }`}
+                      style={{
+                        fontSize: 12,
+                        color: item.completed ? '#aeacaa' : '#37352f',
+                        textDecoration: item.completed ? 'line-through' : 'none',
+                      }}
                     >
                       {item.text}
                     </span>

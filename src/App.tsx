@@ -3,7 +3,18 @@ import { TaskList } from './components/TaskList';
 
 function App() {
   return (
-    <div className="w-[380px] h-[560px] font-sans bg-white flex flex-col overflow-hidden border border-black">
+    <div
+      style={{
+        width: 380,
+        height: 560,
+        fontFamily: 'var(--notion-font)',
+        background: 'var(--notion-bg)',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        border: '1px solid var(--notion-border)',
+      }}
+    >
       <TaskList />
     </div>
   );
