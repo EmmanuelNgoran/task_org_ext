@@ -189,6 +189,24 @@ export function useTasks() {
     [updateTask],
   );
 
+  const toggleSubItem = useCallback(
+    (taskId: string, subItemId: string) => {
+      persist((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? {
+                ...t,
+                subItems: t.subItems.map((s) =>
+                  s.id === subItemId ? { ...s, completed: !s.completed } : s,
+                ),
+              }
+            : t,
+        ),
+      );
+    },
+    [persist],
+  );
+
   return {
     tasks,
     loading,
@@ -199,6 +217,7 @@ export function useTasks() {
     pauseTask,
     resetTask,
     completeTask,
+    toggleSubItem,
   };
 }
 
